@@ -3,7 +3,7 @@ import pandas as pd
 
 def verify_consistent_demography(filepath_dx: str='../intermediates/dx_demo.pkl',
                                  filepath_vitals: str='../intermediates/vitals_demo.pkl'):
-    '''Verify that the (non-null) demographic information between the two data-types Diagnoses and Vitals are consistent. The existence of this function is just for peace of mind, and not indicative of the quality of the data sources from which this function draws.'''
+    '''Verify that the (non-null) demographic information between the two data-types Diagnoses and Vitals are consistent. The existence of this function is just for peace of mind, and not suggestive of the quality of the data sources.'''
 
     # Load and deserialize the two named dataframes
     dx = pd.read_pickle(filepath_dx)
