@@ -24,7 +24,7 @@ def preprocess_dx_df(filepath: str=FILEPATH_DIAGNOSTICS) -> pd.DataFrame:
         'Age at Time of Diagnosis': 'Int64',
         'Date': 'str',  # to be parsed
         'Diagnosis Type': 'string',  # cannot have `np.nan` as a category level
-        'ICD if Available': 'string',  # cannot have `np.nan` as a category level
+        'ICD if Available': 'string',  # cannot have `np.nan` as a category level;  for all such, see below
         'Main Diagnosis Text': 'str',
         'Secondary Diagnosis Text': 'str',
         # 'Review Note': 'str'  # all blanks
@@ -33,14 +33,14 @@ def preprocess_dx_df(filepath: str=FILEPATH_DIAGNOSTICS) -> pd.DataFrame:
     # Select desired columns
     selected_columns = list(column_types.keys())
 
-    # Specify file-wide NA values
+    # Specify file-wide NA values (were hard-coded by others; below not exhaustive of all such hard-codeds)
     na_values = ['', 'NULL', 'NONE', 'Unknown']
 
     # Import data
     df = pd.read_csv(filepath, usecols=selected_columns,
                      dtype=column_types, na_values=na_values)
 
-    # Parse datetimes
+    # Parse datetimes ('mixed' to infer each individually)
     df['Date_of_death'] = pd.to_datetime(df['Date_of_death'], format='mixed')
     df['Date'] = pd.to_datetime(df['Date'], format='mixed')
 
@@ -61,7 +61,7 @@ def preprocess_dx_df(filepath: str=FILEPATH_DIAGNOSTICS) -> pd.DataFrame:
         'UNKNOWN': None,
         'UNKOWN': None,
         'NOT SPECIFIED': None,
-        'DIAGNOSIS': None,  # (w/o ICD given,) this is not specific enough
+        'DIAGNOSIS': None,  # (w/o an ICD given,) this is not specific enough
     }
     df['Main Diagnosis Text'] = df['Main Diagnosis Text'].replace(diagnoses_replacements)
     df['Secondary Diagnosis Text'] = df['Secondary Diagnosis Text'].replace(diagnoses_replacements)
@@ -75,7 +75,7 @@ def preprocess_dx_df(filepath: str=FILEPATH_DIAGNOSTICS) -> pd.DataFrame:
     '''This line is for `verify_consistent_demography()` in `multi_type_processing`.'''
     # df.drop_duplicates(subset='Subject').to_pickle('../intermediates/dx_demo.pkl')
 
-    '''Note: No need to filter rows based on unique `Subject` values (the focus, at least in terms of comorbidities, is on ALL diagnoses).'''
+    '''Note: No need (yet) to filter rows based on unique `Subject` values (the focus, at least in terms of comorbidities, is on ALL diagnoses).'''
 
     print(f'Unique Subjects in this D.F.:\t{df["Subject"].unique().shape[0]}')  # TK Define this (1210) to be number of unique patients across all data types
 
@@ -190,7 +190,7 @@ def deduplicate_gbm_dx(df: pd.DataFrame):
     '''Keep only rows with first GBM diagnoses. Exits pipe because further processing is done elsewhere.'''
 
     def keep_gbm_dx_rows_via_regex(df: pd.DataFrame) -> pd.DataFrame:
-        '''Naive method: Identify, by eye, and mark all the GBM synonyms (synonyms/typos which were found comprehensively (in the xlsx)).'''
+        '''Naive method: Ocularly identify and mark all the GBM synonyms (synonyms/typos which were found comprehensively (in the xlsx)).'''
 
         rows_GBM = df.copy()
 
@@ -210,12 +210,12 @@ def deduplicate_gbm_dx(df: pd.DataFrame):
         # Matches 2879 (out of 19887) rows and 1025 (out of 1210) unique patients
         # 1025 is to be expected because only 1033 is obtained after removing the generic 'neoplasm's and 'tumor's, without even excluding e.g. neuroblastomas and non-astrocytic gliomas.
         contain_pattern = r'gi?li?o?(?:(?:bo?l?astr?|sarc)oma|matosis cerebri)|gbm|gmb|(?:anaplastic [a-z]*|GRADE IV |malignant )astrocyt?oma|(?:glioma )?(?:high grade|grade 3or 4)(?: glioma)?'
-        # TK include further justification (links) e.g for gliosarcoma and gliomatosis cerebri
+        # TK include further justification (links) e.g for (inclusion of) gliosarcoma and gliomatosis cerebri
         # "High grade" (the same as "grade 3or 4") glioma included because (before 2021) GBM is grade 4 glioma (TK cite), and to include as many GBM diagnoses as possible.
 
         rows_GBM['gbm_dx_marker'] = rows_GBM['Main Diagnosis Text'].str.contains(contain_pattern, case=False, regex=True)
 
-        # GBM == GARD2491 TK include other codes?
+        # GBM == GARD-2491 TK include other codes?
         filter_result = rows_GBM[rows_GBM['gbm_dx_marker'] |
                        (rows_GBM['ICD if Available'] == '2491')]
 
@@ -232,7 +232,7 @@ def deduplicate_gbm_dx(df: pd.DataFrame):
     # For clarity, rename `Date` column
     rows_GBM = rows_GBM.rename(columns={'Date': 'Date_of_Diagnosis'})
 
-    # De-space/Remove spaces in column names (so they won't get affected by `split(' ')` later on)
+    # De-space column names (so they won't get affected by `split(' ')` later on)
     rows_GBM = rows_GBM.rename(
         columns={col: col.replace(' ', '_') for col in rows_GBM.columns})
 
@@ -249,6 +249,7 @@ def deduplicate_gbm_dx(df: pd.DataFrame):
     rows_GBM.to_pickle(resolve_path('../intermediates/only_GBM_dx_dates.pkl'))
 
 df = preprocess_dx_df()
+# TK copy down percent of right-censored here: __%
 print(f'Percent of total right-censored:\t{df.drop_duplicates(subset="Subject")["Date_of_death"].isna().sum()/len(df.drop_duplicates(subset="Subject")["Date_of_death"]) * 100:.2f}%')
 print(df.info())
 
@@ -257,6 +258,3 @@ deduplicate_gbm_dx(preprocess_dx_df())
 
 # Visualization pipline (preprocess %>% visualize)
 # visualize_conditions_barplot(preprocess_dx_df())
-
-
-
