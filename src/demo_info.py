@@ -16,7 +16,7 @@ def preprocess_demo_df(filepath: str=FILEPATH_VITALS) -> pd.DataFrame:
         'Subject': 'str',
         'Gender': 'category',
         'Race': 'category',
-        'Ethnicity': 'string',  # string, not category, because cannot have `np.nan` as a category level (i.e. "nullable")
+        'Ethnicity': 'string',  # string, not category, because cannot have `np.nan` as a category level (i.e. "nullable");  See below
         'Age at time of Vital': 'Int64',
         'Date': 'str',  # to be parsed
         # 'btris_cluster_id': 'category',
@@ -76,7 +76,7 @@ def set_index_4_indep_demo_df(df: pd.DataFrame):
     # Serialize the DataFrame
     df.to_pickle('../intermediates/explanatory_demo.pkl')
 
-# Standard pipeline (preprocess %>% set_index) (NO imputation)
+# Standard pipeline (preprocess %>% set_index) (NO imputation---this is done in surv_analysis.py)
 # set_index_4_indep_demo_df(preprocess_demo_df())
 
 
