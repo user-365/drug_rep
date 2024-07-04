@@ -15,11 +15,11 @@ def verify_consistent_demography(filepath_dx: str='../intermediates/dx_demo.pkl'
     # Make column-naming consistent
     vitals = vitals.rename(columns={'Ethnicity': 'Ethnic_group'})
 
-    # Differentiate column names so they aren't collapsed in the concatenation
+    # Differentiate column names so they aren't immediately collapsed in the concatenation
     dx.columns = [col + '_dx' for col in dx.columns]
     vitals.columns = [col + '_vitals' for col in vitals.columns]
 
-    # Concatenate the two dataframes, as promised
+    # Concatenate the two dataframes, finally
     combined = pd.concat([dx, vitals], axis='columns', join='inner')
 
     # Select columns we wish to cross-reference
@@ -43,7 +43,7 @@ def verify_consistent_demography(filepath_dx: str='../intermediates/dx_demo.pkl'
 
             selected = combined[[f'{characteristic}_dx', f'{characteristic}_vitals']]
             combined[f'Different {characteristic}?'] = selected[f'{characteristic}_dx'] != selected[f'{characteristic}_vitals']
-            inconsistent = selected[combined[f"Different {characteristic}?"]]
+            inconsistent = selected[combined[f'Different {characteristic}?']]
             line = f'Rows where {characteristic} is different for the two columns:\n{"Empty DataFrame" if inconsistent.empty else inconsistent}\n'
             file.write(line)
             print(line)
