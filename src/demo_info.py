@@ -16,7 +16,7 @@ def preprocess_demo_df(filepath: str=FILEPATH_VITALS) -> pd.DataFrame:
         'Subject': 'str',
         'Gender': 'category',
         'Race': 'category',
-        'Ethnicity': 'string',  # string, not category, because cannot have `np.nan` as a category level (i.e. "nullable");  See below
+        'Ethnicity': 'string',  # string, not category, because cannot have `np.nan' as a category level (i.e. "nullable");  See below
         'Age at time of Vital': 'Int64',
         'Date': 'str',  # to be parsed
         # 'btris_cluster_id': 'category',
@@ -38,11 +38,12 @@ def preprocess_demo_df(filepath: str=FILEPATH_VITALS) -> pd.DataFrame:
     df = pd.read_csv(filepath, usecols=selected_cols,
                      dtype=column_types, na_values=na_values)
 
-    # Parse datetimes
+    # Parse datetimes, rename column
     date_format = '%m/%d/%y %H:%M'
     df['Date'] = pd.to_datetime(df['Date'], format=date_format)
+    df = df.rename(columns={'Date': 'Seen_Date'})
 
-    # In `Ethnicity` column, fix misspelled and missing values
+    # In `Ethnicity' column, fix misspelled and missing values
     replacements = {
         'Not Hispanic or Lati': 'Not Hispanic or Latino',
         'N': None,  # Is 'N' considered a missing value? BTRIS doesn't know, so better be safe
@@ -53,14 +54,17 @@ def preprocess_demo_df(filepath: str=FILEPATH_VITALS) -> pd.DataFrame:
     # Cast nullable categorical columns into 'category' type, the non-nullable ones having already been cast
     df['Ethnicity'] = df['Ethnicity'].astype('category')
 
-    '''This is for `verify_consistent_demography()` in `multi_type_processing`.'''
-    # # Demographic characteristics don't change over time for a given `Subject` (vitals information do, but they are irrelevant here, so we drop them)
+    '''This is for `verify_consistent_demography()' in `multi_type_processing`.'''
+    # # Demographic characteristics don't change over time for a given `Subject' (vitals information do, but they are irrelevant here, so we drop them)
     # df.drop_duplicates(subset='Subject').to_pickle(resolve_path('../intermediates/vitals_demo.pkl'))
 
     print(f'Number of unique patients with recorded vitals:\t{df["Subject"].unique().shape[0]}')
+    
+    # Sort by `Seen_Date' for most recent record (last)
+    df = df.sort_values(by='Seen_Date', ascending=True)
 
-    # Filter rows so that `Subject`s are represented by unique rows
-    return df.drop_duplicates(subset='Subject')
+    # Filter rows so that `Subject`s are represented by unique rows (keeping most recent record)
+    return df.drop_duplicates(subset='Subject', keep='last')
 
 
 
@@ -68,9 +72,9 @@ def set_index_4_indep_demo_df(df: pd.DataFrame):
     '''Exits pipe because further processing is done elsewhere.'''
 
     # Select desired columns
-    df = df[['Subject', 'Gender', 'Race', 'Ethnicity']]
+    df = df[['Subject', 'Gender', 'Race', 'Ethnicity', 'Seen_Date']]
 
-    # Set index to `Subject` ID, to concatenate with similar DataFrames later
+    # Set index to `Subject' ID, to concatenate with similar DataFrames later
     df = df.set_index('Subject')
 
     # Serialize the DataFrame
@@ -212,7 +216,7 @@ def test_chisq_association(df: pd.DataFrame):
     '''  b. Alternative hypotheses: There is such a difference.'''
 
     '''2. Assumptions:'''
-    '''  1. ! Random sampling: The `genpop` frequencies (renamed such below) are from the 2020 US Census and is thus a random sample.  However, the `GBM` frequencies (from our data) are (from what i've been told) pulled from NIH patient records (i.e. records of patients who have gone to NIH), which means it's only a random sample (census) from the population of people who have gone to the NIH as patients, not from the general US population.  So, with respect to the `genpop` frequencies, the `GBM` frequencies are biased (and vice versa).'''
+    '''  1. ! Random sampling: The `genpop' frequencies (renamed such below) are from the 2020 US Census and is thus a random sample.  However, the `GBM' frequencies (from our data) are (from what i've been told) pulled from NIH patient records (i.e. records of patients who have gone to NIH), which means it's only a random sample (census) from the population of people who have gone to the NIH as patients, not from the general US population.  So, with respect to the `genpop' frequencies, the `GBM' frequencies are biased (and vice versa).'''
     '''  2. ! Independence of observations:'''
     '''  2.a. Within groups: The records were pulled indiscriminately (w.r.t. ['Gender', 'Race', 'Ethnicity']), so within the GBM data, observations are independent.  Obviously, with the Census data being a census, there is no speak of independence between observations within the group.'''
     '''  2.b. ! Between groups: While the GBM data and the Census data are not perfectly independent, as was explained in the Note about Independence, the Census data is largely independent of the former.'''
@@ -262,7 +266,7 @@ def test_chisq_association(df: pd.DataFrame):
         genpop_sum = genpop_df['genpop_counts'].sum()
         size_downscale = EXPECTED_SIZE / genpop_sum
 
-        # Scale down the `genpop` column so that its sum equals that of the `GBM` column
+        # Scale down the `genpop' column so that its sum equals that of the `GBM' column
         genpop_df['genpop_counts'] = genpop_df['genpop_counts'].apply(lambda size: round(size * size_downscale))
 
         # Get the column representing the observed counts in the GBM data
@@ -270,14 +274,14 @@ def test_chisq_association(df: pd.DataFrame):
                 .reset_index(name='GBM_counts'))
 
         if not is_col_gender:
-            # Making sure the `{col}` column in both DataFrames can hold NA values
+            # Making sure the `{col}' column in both DataFrames can hold NA values
             genpop_df[col] = genpop_df[col].astype(object)
             GBM_df[col] = GBM_df[col].astype(object)
 
-        # Merge the two columns side-by-side, matching on their `{col}` columns, and including the union of the keys in `{col}`
+        # Merge the two columns side-by-side, matching on their `{col}' columns, and including the union of the keys in `{col}`
         merged_df = pd.merge(genpop_df, GBM_df, how='outer', on=col)
 
-        # `Ethnicity` columns have expected cell count equal to zero, so...
+        # `Ethnicity' columns have expected cell count equal to zero, so...
         if col == 'Ethnicity':
             # Get all numeric columns (expected & observed)
             numeric_columns = merged_df.select_dtypes(include=np.number).columns.tolist()
